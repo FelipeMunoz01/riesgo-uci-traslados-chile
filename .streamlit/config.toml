@@ -1,0 +1,12 @@
+# Tema explícito en vez de seguir la preferencia del sistema: así la app se ve
+# igual para todos, que es lo que se quiere en una demo pública.
+[theme]
+base = "light"
+primaryColor = "#0E7490"
+backgroundColor = "#FBFCFD"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#0F172A"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"

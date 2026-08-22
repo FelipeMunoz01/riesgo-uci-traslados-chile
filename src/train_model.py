@@ -53,7 +53,13 @@ ANIO_TEST = 2024
 # filas, y probablemente exigiría reentrenar más seguido.
 ANIOS_TRAIN = [2020, 2021, 2022, 2023]
 
-COMORBILIDADES = ["tiene_diabetes", "tiene_hipertension", "tiene_erc", "tiene_epoc", "tiene_obesidad"]
+COMORBILIDADES = [
+    "tiene_diabetes", "tiene_hipertension", "tiene_erc", "tiene_epoc", "tiene_obesidad",
+    "tiene_insuf_cardiaca", "tiene_cardiopatia_isquemica", "tiene_arritmia", "tiene_acv_previo",
+    "tiene_vascular_periferica", "tiene_cancer", "tiene_cancer_metastasico", "tiene_hepatopatia",
+    "tiene_demencia", "tiene_inmunosupresion", "tiene_anemia", "tiene_desnutricion",
+    "tiene_asma", "tiene_tabaquismo",
+]
 
 # Solo variables cuyo VALOR se conoce al momento de decidir el traslado.
 # Ver el docstring de extract_data.py para por qué especialidad_medica,
@@ -66,6 +72,11 @@ FEATURES_CATEGORICAS = [
     "tipo_procedencia",
     "tipo_ingreso",
     "diagnostico1_categoria",
+    # El código completo (I21.0 = IAM anterior, 76.9% de tasa UCI) discrimina mucho
+    # más que la categoría de 3 caracteres (I21, todo junto), pero solo llega al 58%
+    # de cobertura con el top-200 frente al 80% de la categoría. Se usan LOS DOS: la
+    # categoría da cobertura amplia y el subcódigo el detalle donde hay volumen.
+    "diagnostico1_subcodigo",
     "procedimiento_principal",
 ]
 FEATURES_NUMERICAS = [
@@ -73,7 +84,8 @@ FEATURES_NUMERICAS = [
     "tiene_mcc", "tiene_cc", "nivel_severidad_potencial",
 ] + COMORBILIDADES
 FEATURES = FEATURES_CATEGORICAS + FEATURES_NUMERICAS
-TOP_CATEGORIAS = 200  # tope de cardinalidad para diagnostico1_categoria y procedimiento_principal
+TOP_CATEGORIAS = 200   # tope de cardinalidad para diagnostico1_categoria y procedimiento_principal
+TOP_SUBCODIGOS = 250   # HistGradientBoosting admite hasta 255 categorías por feature
 
 # Se entrenan DOS modelos con las mismas features, que responden preguntas distintas:
 #
@@ -108,8 +120,12 @@ def cargar_nombres_hospitales():
     return nombres
 
 
-def cargar_descripciones_cie10():
-    """Código de categoría CIE-10 (3 caracteres, ej. 'A41') -> descripción en español."""
+def cargar_descripciones_cie10(completas: bool = False):
+    """Código CIE-10 -> descripción en español.
+
+    completas=False: por categoría de 3 caracteres ('A41' -> 'Septicemia').
+    completas=True:  por código completo ('I21.0' -> 'Infarto ... de la pared anterior').
+    """
     import openpyxl
 
     wb = openpyxl.load_workbook(CIE10_DICT, read_only=True, data_only=True)
@@ -117,12 +133,14 @@ def cargar_descripciones_cie10():
     descripciones = {}
     filas = ws.iter_rows(values_only=True)
     next(filas)  # encabezado
-    for _version, _codigo, _desc, categoria, *_ in filas:
-        if not categoria:
-            continue
-        cod_cat, _, desc_cat = categoria.partition(" ")
-        if cod_cat and cod_cat not in descripciones:
-            descripciones[cod_cat] = desc_cat.strip().title()
+    for _version, codigo, desc, categoria, *_ in filas:
+        if completas:
+            if codigo and desc and str(codigo) not in descripciones:
+                descripciones[str(codigo).strip()] = str(desc).strip().capitalize()
+        elif categoria:
+            cod_cat, _, desc_cat = str(categoria).partition(" ")
+            if cod_cat and cod_cat not in descripciones:
+                descripciones[cod_cat] = desc_cat.strip().title()
     return descripciones
 
 
@@ -276,6 +294,11 @@ def main():
         d["diagnostico1_categoria"] = d["diagnostico1_categoria"].where(
             d["diagnostico1_categoria"].isin(top_categorias_diag), "OTRO"
         )
+    top_subcodigos = train["diagnostico1_subcodigo"].value_counts().head(TOP_SUBCODIGOS).index
+    for d in (train, test):
+        d["diagnostico1_subcodigo"] = d["diagnostico1_subcodigo"].where(
+            d["diagnostico1_subcodigo"].isin(top_subcodigos), "OTRO"
+        )
     top_procedimientos = train["procedimiento_principal"].value_counts().head(TOP_CATEGORIAS).index
     for d in (train, test):
         d["procedimiento_principal"] = d["procedimiento_principal"].where(
@@ -305,12 +328,30 @@ def main():
     opciones["cod_hospital_nombre"] = {
         cod: nombres_hospitales.get(int(cod), f"Hospital {cod}") for cod in opciones["cod_hospital"]
     }
+    # para el desplegable en cascada: qué subcódigos existen bajo cada categoría
+    # groupby(...).agg(lambda -> list) falla sobre columnas categóricas: pandas
+    # intenta convertir la lista de vuelta al dtype categórico. Se arma a mano.
+    pares = (
+        train.loc[train["diagnostico1_subcodigo"] != "OTRO",
+                  ["diagnostico1_categoria", "diagnostico1_subcodigo"]]
+        .astype(str).drop_duplicates()
+    )
+    sub_por_categoria: dict[str, list[str]] = {}
+    for categoria, subcodigo in pares.itertuples(index=False):
+        sub_por_categoria.setdefault(categoria, []).append(subcodigo)
+    opciones["subcodigos_por_categoria"] = {k: sorted(v) for k, v in sub_por_categoria.items()}
+
     descripciones_cie10 = cargar_descripciones_cie10()
     opciones["diagnostico1_descripcion"] = {
         cod: descripciones_cie10.get(cod, "Sin descripción disponible")
         for cod in opciones["diagnostico1_categoria"]
     }
     opciones["diagnostico1_descripcion"]["OTRO"] = "Otro diagnóstico (fuera de los 200 más frecuentes)"
+    desc_sub = cargar_descripciones_cie10(completas=True)
+    opciones["subcodigo_descripcion"] = {
+        cod: desc_sub.get(cod, "") for cod in opciones["diagnostico1_subcodigo"]
+    }
+    opciones["subcodigo_descripcion"]["OTRO"] = "Otro código de la misma categoría"
 
     # Las claves de 'cama' quedan también en la raíz por compatibilidad con el
     # código de la app que ya las usaba (modelo, umbrales_semaforo, etc.).

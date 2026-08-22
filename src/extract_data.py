@@ -81,6 +81,24 @@ COMORBILIDADES = {
     "tiene_erc": ["N18"],
     "tiene_epoc": ["J44"],
     "tiene_obesidad": ["E66"],
+    # Condiciones que pesan en el riesgo de deterioro y que el comité conoce al
+    # decidir el traslado. Se buscan igual que las de arriba, entre los
+    # diagnósticos secundarios ya codificados.
+    "tiene_insuf_cardiaca": ["I50"],
+    "tiene_cardiopatia_isquemica": ["I20", "I21", "I22", "I23", "I24", "I25"],
+    "tiene_arritmia": ["I47", "I48", "I49"],
+    "tiene_acv_previo": ["I60", "I61", "I62", "I63", "I64", "I65", "I66", "I67", "I68", "I69", "G45"],
+    "tiene_vascular_periferica": ["I70", "I71", "I72", "I73", "I74"],
+    "tiene_cancer": ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"],
+    "tiene_cancer_metastasico": ["C77", "C78", "C79", "C80"],
+    "tiene_hepatopatia": ["K70", "K71", "K72", "K73", "K74", "K76", "B18"],
+    "tiene_demencia": ["F00", "F01", "F02", "F03", "G30", "G31"],
+    "tiene_inmunosupresion": ["B20", "B21", "B22", "B23", "B24", "D80", "D81", "D83", "D84"],
+    "tiene_anemia": ["D50", "D51", "D52", "D53", "D55", "D56", "D57", "D58", "D59",
+                     "D60", "D61", "D62", "D63", "D64"],
+    "tiene_desnutricion": ["E40", "E41", "E42", "E43", "E44", "E45", "E46"],
+    "tiene_asma": ["J45", "J46"],
+    "tiene_tabaquismo": ["F17", "Z72.0"],
 }
 
 DIAG_SECUNDARIOS_COLS = [f"DIAGNOSTICO{i}" for i in range(2, 36)]
@@ -252,7 +270,7 @@ def main():
                 TIPO_PROCEDENCIA AS tipo_procedencia,
                 TIPO_INGRESO AS tipo_ingreso,
                 TIPO_ACTIVIDAD AS tipo_actividad,
-                DIAGNOSTICO1 AS diagnostico1,
+                DIAGNOSTICO1 AS diagnostico1_subcodigo,
                 SUBSTR(DIAGNOSTICO1, 1, 3) AS diagnostico1_categoria,
                 _mcc::INT AS tiene_mcc,
                 _cc::INT AS tiene_cc,

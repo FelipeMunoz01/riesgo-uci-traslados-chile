@@ -1,5 +1,7 @@
 # Predictor de riesgo de cama crítica (UCI/UTI) — GRD Chile
 
+**▶️ [Probar la aplicación](https://riesgo-uci-traslados-chile.streamlit.app)**
+
 Modelo y aplicación para estimar, **al momento de decidir el traslado de un paciente
 entre instituciones**, dos cosas distintas:
 
@@ -14,7 +16,7 @@ Construido sobre los egresos hospitalarios públicos GRD de Chile (DEIS/MINSAL, 
 ## El hallazgo principal: mi primer modelo daba 0,955 y era mentira
 
 La primera versión alcanzó **ROC-AUC 0,955**. Al auditarla encontré que tres variables
-filtraban información del futuro. La versión honesta rinde **0,915**.
+filtraban información del futuro. La versión honesta rinde **0,918**.
 
 | paso | ROC-AUC |
 |---|---|
@@ -22,7 +24,8 @@ filtraban información del futuro. La versión honesta rinde **0,915**.
 | quitar variables contaminadas | 0,931 |
 | quitar población ambulatoria | 0,913 |
 | corregir bugs (edad, comorbilidad) | 0,913 (±0,000) |
-| excluir 2019 (subregistro) | **0,915** |
+| excluir 2019 (subregistro) | 0,915 |
+| subcódigo CIE-10 + 19 comorbilidades | **0,918** |
 
 ### Por qué las tres variables eran fuga
 
@@ -76,11 +79,11 @@ casos que un comité debe revisar dos veces.
 
 | modelo | ROC-AUC | Average Precision | tasa base |
 |---|---|---|---|
-| Probabilidad de cama crítica | 0,915 | 0,736 | 18,0 % |
-| Riesgo de desenlace adverso | 0,912 | 0,740 | 19,4 % |
+| Probabilidad de cama crítica | 0,918 | 0,745 | 18,0 % |
+| Riesgo de desenlace adverso | 0,915 | 0,748 | 19,4 % |
 
 Restringido a la población objetivo (102.476 pacientes trasladados desde otra institución):
-**AUC 0,904 · AP 0,812**.
+**AUC 0,908 · AP 0,818**.
 
 Entrenamiento 2020-2023 (2,93 M admisiones), evaluación en **2024** — un año completo no
 visto durante el entrenamiento, en vez de un split aleatorio.
@@ -102,6 +105,13 @@ Todas verificadas midiendo, no asumiendo:
   de UCI porque también se dializa a críticos con falla renal aguda.
 - **2019 excluido.** Subregistraba la etiqueta (9,1 % vs ~14 %). Entrenar sin ese año mejora
   el resultado pese a usar un millón de filas menos.
+- **Diagnóstico en dos niveles.** La categoría de 3 caracteres (`I21`) agrupa cuadros muy
+  distintos: `I21.0` (infarto de pared anterior) tiene 76,9 % de tasa de UCI y `I21.4` (sin
+  elevación del ST) un 52,9 %. Pero usar solo el código completo empeora, porque hay 8.947
+  distintos y el top-200 cubriría apenas el 58 % de los casos frente al 80 % de la categoría.
+  Se usan **los dos a la vez**: cobertura amplia y detalle donde hay volumen.
+- **19 banderas de comorbilidad** derivadas de los diagnósticos secundarios, agrupadas por
+  sistema (cardiovascular, metabólico y renal, respiratorio, oncológico e inmune).
 - **Edad corregida a años cumplidos.** `date_diff('year', ...)` en DuckDB cuenta cruces de
   1 de enero: un recién nacido del 31 de diciembre ingresado el 1 de enero figuraba con
   1 año. Afectaba a 49.081 casos, en el tramo etario con 47 % de tasa de UCI.

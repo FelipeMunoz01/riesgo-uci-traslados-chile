@@ -23,14 +23,57 @@ import streamlit as st
 
 RAIZ = Path(__file__).resolve().parent.parent
 MODELO_PATH = RAIZ / "models" / "modelo_riesgo_uci.joblib"
-NORMA_MINSAL_PATH = RAIZ / "referencias" / "Norma 2018-2019 MINSAL.xlsx"
-IRGRD_DICT_PATH = RAIZ / "referencias" / "Tablas maestras bases GRD 2.xlsx"
+
+ESTILOS = """
+<style>
+  /* Streamlit deja mucho aire arriba y centra en un ancho estrecho; se recupera
+     espacio útil y se fija un máximo cómodo de lectura. */
+  .block-container { padding-top: 2.2rem; padding-bottom: 4rem; max-width: 1180px; }
+  #MainMenu, footer, header [data-testid="stStatusWidget"] { visibility: hidden; }
+
+  /* Encabezado propio en vez del st.title genérico */
+  .cabecera { border-bottom: 1px solid #E2E8F0; padding-bottom: 1.1rem; margin-bottom: 1.6rem; }
+  .cabecera h1 { font-size: 1.85rem; font-weight: 650; letter-spacing: -0.02em;
+                 color: #0F172A; margin: 0 0 .35rem 0; line-height: 1.2; }
+  .cabecera p  { color: #64748B; font-size: .93rem; margin: 0; max-width: 62ch; line-height: 1.5; }
+  .cabecera .etiqueta { display: inline-block; font-size: .7rem; font-weight: 600;
+                        letter-spacing: .06em; text-transform: uppercase; color: #0E7490;
+                        background: #ECFEFF; border: 1px solid #A5F3FC;
+                        padding: .18rem .5rem; border-radius: 4px; margin-bottom: .6rem; }
+
+  /* Pestañas con aspecto de navegación, no de botones sueltos */
+  .stTabs [data-baseweb="tab-list"] { gap: 1.6rem; border-bottom: 1px solid #E2E8F0; }
+  .stTabs [data-baseweb="tab"] { padding: .55rem 0; font-weight: 500; }
+
+  /* Tarjetas para los dos puntajes */
+  .tarjeta { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
+             padding: 1.1rem 1.3rem .5rem 1.3rem; height: 100%; }
+  .tarjeta .titulo { font-size: 1.02rem; font-weight: 600; color: #0F172A; margin-bottom: .15rem; }
+  .tarjeta .sub    { font-size: .82rem; color: #64748B; margin-bottom: .3rem; line-height: 1.45; }
+
+  /* Secciones del formulario */
+  .seccion { font-size: .74rem; font-weight: 650; letter-spacing: .07em;
+             text-transform: uppercase; color: #94A3B8;
+             margin: 1.7rem 0 .5rem 0; padding-bottom: .35rem;
+             border-bottom: 1px solid #F1F5F9; }
+
+  /* Casillas de comorbilidad más compactas: son 19 */
+  .stCheckbox { margin-bottom: -.55rem; }
+  .stCheckbox label p { font-size: .87rem; }
+
+  /* El botón principal con más presencia */
+  .stButton button[kind="primary"] { padding: .5rem 1.5rem; font-weight: 600; }
+
+  div[data-testid="stMetricValue"] { font-size: 1.25rem; }
+</style>
+"""
 
 st.set_page_config(
     page_title="Priorización de Camas Críticas UCI/UTI",
     page_icon="🏥",
     layout="wide",
 )
+st.markdown(ESTILOS, unsafe_allow_html=True)
 
 NOMBRES_LEGIBLES = {
     "cod_hospital": "Hospital",
@@ -48,56 +91,58 @@ NOMBRES_LEGIBLES = {
     "tiene_erc": "Enfermedad renal crónica",
     "tiene_epoc": "EPOC",
     "tiene_obesidad": "Obesidad",
+    "diagnostico1_subcodigo": "Diagnóstico (código específico)",
+    "tiene_insuf_cardiaca": "Insuficiencia cardíaca",
+    "tiene_cardiopatia_isquemica": "Cardiopatía isquémica",
+    "tiene_arritmia": "Arritmia",
+    "tiene_acv_previo": "ACV previo",
+    "tiene_vascular_periferica": "Enfermedad vascular periférica",
+    "tiene_cancer": "Cáncer activo",
+    "tiene_cancer_metastasico": "Cáncer metastásico",
+    "tiene_hepatopatia": "Hepatopatía",
+    "tiene_demencia": "Demencia",
+    "tiene_inmunosupresion": "Inmunosupresión / VIH",
+    "tiene_anemia": "Anemia",
+    "tiene_desnutricion": "Desnutrición",
+    "tiene_asma": "Asma",
+    "tiene_tabaquismo": "Tabaquismo",
 }
-COMORBILIDADES = ["tiene_diabetes", "tiene_hipertension", "tiene_erc", "tiene_epoc", "tiene_obesidad"]
+# agrupadas por sistema para que el formulario no sea una lista plana de 19 casillas
+GRUPOS_COMORBILIDAD = {
+    "Cardiovascular": [
+        ("tiene_hipertension", "Hipertensión"),
+        ("tiene_insuf_cardiaca", "Insuficiencia cardíaca"),
+        ("tiene_cardiopatia_isquemica", "Cardiopatía isquémica"),
+        ("tiene_arritmia", "Arritmia / fibrilación auricular"),
+        ("tiene_acv_previo", "ACV previo"),
+        ("tiene_vascular_periferica", "Enfermedad vascular periférica"),
+    ],
+    "Metabólico y renal": [
+        ("tiene_diabetes", "Diabetes"),
+        ("tiene_obesidad", "Obesidad"),
+        ("tiene_erc", "Enfermedad renal crónica"),
+        ("tiene_hepatopatia", "Hepatopatía / cirrosis"),
+        ("tiene_desnutricion", "Desnutrición"),
+    ],
+    "Respiratorio": [
+        ("tiene_epoc", "EPOC"),
+        ("tiene_asma", "Asma"),
+        ("tiene_tabaquismo", "Tabaquismo"),
+    ],
+    "Oncológico e inmune": [
+        ("tiene_cancer", "Cáncer activo"),
+        ("tiene_cancer_metastasico", "Cáncer metastásico"),
+        ("tiene_inmunosupresion", "Inmunosupresión / VIH"),
+        ("tiene_anemia", "Anemia"),
+        ("tiene_demencia", "Demencia"),
+    ],
+}
+COMORBILIDADES = [c for grupo in GRUPOS_COMORBILIDAD.values() for c, _ in grupo]
 
 
 @st.cache_resource
 def cargar_modelo():
     return joblib.load(MODELO_PATH)
-
-
-@st.cache_resource
-def cargar_norma_minsal():
-    """Norma nacional MINSAL 2018-2019 por código GRD: estancia esperada, percentiles y Exitus.
-
-    El código GRD ya asignado (no solo el diagnóstico) no se usa como feature del modelo -
-    se calcula al cierre del episodio y usarlo como input sería fuga de datos. Pero como
-    contexto de apoyo para un comité que ya tiene un GRD provisional, es información oficial
-    valiosa: la norma nacional para ese GRD+severidad exacto.
-    """
-    import openpyxl
-
-    wb_dict = openpyxl.load_workbook(IRGRD_DICT_PATH, read_only=True, data_only=True)
-    ws_dict = wb_dict["IR - GRD"]
-    descripciones = {}
-    for cod, desc in ws_dict.iter_rows(min_row=2, values_only=True):
-        if cod is not None:
-            descripciones[str(cod).zfill(6)] = desc
-
-    wb_norma = openpyxl.load_workbook(NORMA_MINSAL_PATH, read_only=True, data_only=True)
-    ws_norma = wb_norma["Norma 2018-2019 MINSAL"]
-    norma = {}
-    for row in ws_norma.iter_rows(min_row=2, values_only=True):
-        (grd, _tipo, gravedad, total_altas, _total_est, est_media, _altas_depu, _total_est_depu,
-         est_media_depu, _n_out_inf, n_out_sup, exitus, p25, p50, p75, corte_inf, corte_sup,
-         _peso_total, _peso_total_depu) = row
-        if grd is None:
-            continue
-        cod = str(grd).zfill(6)
-        norma[cod] = {
-            "descripcion": descripciones.get(cod, "Sin descripción"),
-            "gravedad": gravedad,
-            "total_altas": total_altas or 0,
-            "est_media": float(str(est_media).replace(",", ".")) if est_media else 0.0,
-            "est_media_depurada": float(str(est_media_depu).replace(",", ".")) if est_media_depu else 0.0,
-            "exitus": exitus or 0,
-            "tasa_exitus": (exitus / total_altas * 100) if total_altas else 0.0,
-            "p25": p25, "p50": p50, "p75": p75,
-            "corte_inf": corte_inf, "corte_sup": corte_sup,
-            "n_outliers_superiores": n_out_sup or 0,
-        }
-    return norma
 
 
 def clasificar_riesgo(p, umbrales):
@@ -113,10 +158,12 @@ def gauge_riesgo(p, umbrales, color):
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=p * 100,
-        number={"suffix": "%", "font": {"size": 40}},
+        number={"suffix": "%", "font": {"size": 34, "color": "#0F172A"}},
         gauge={
-            "axis": {"range": [0, 100]},
-            "bar": {"color": color},
+            "axis": {"range": [0, 100], "tickcolor": "#CBD5E1", "tickfont": {"size": 10}},
+            "bar": {"color": color, "thickness": 0.68},
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 0,
             "steps": [
                 {"range": [0, umbrales["amarillo"] * 100], "color": "rgba(46,204,113,0.25)"},
                 {"range": [umbrales["amarillo"] * 100, umbrales["rojo"] * 100], "color": "rgba(243,156,18,0.25)"},
@@ -124,7 +171,10 @@ def gauge_riesgo(p, umbrales, color):
             ],
         },
     ))
-    fig.update_layout(height=220, margin=dict(l=20, r=20, t=10, b=10))
+    fig.update_layout(
+        height=185, margin=dict(l=24, r=24, t=6, b=0),
+        paper_bgcolor="rgba(0,0,0,0)", font=dict(family="sans-serif", color="#475569"),
+    )
     return fig
 
 
@@ -288,11 +338,53 @@ def panel_explicabilidad(datos: dict, artefacto: dict):
     st.dataframe(tabla, width="stretch", hide_index=True)
 
 
+# Valores de arranque del formulario. Sin esto la app abre con el primer valor
+# alfabético de cada lista ("DESCONOCIDO", un hospital de Arica), que da una
+# primera impresión pobre y no representa un caso típico.
+PRECARGA = {
+    "cod_hospital": "114101",  # Sótero del Río, el de mayor volumen del conjunto
+    "sexo": "HOMBRE",
+    "tipo_ingreso": "URGENCIA",
+    "tipo_procedencia": "SERVICIO EMERGENCIA (DOMICILIO)",
+    "prevision": "FONASA INSTITUCIONAL - (MAI) B",
+    "diagnostico1_categoria": "J18",
+    "procedimiento_principal": "SIN_PROCEDIMIENTO",
+}
+
+
+def indice_por_defecto(opciones: list, col: str) -> int:
+    """Posición del valor de arranque, o 0 si ese valor no está disponible."""
+    preferido = PRECARGA.get(col)
+    return opciones.index(preferido) if preferido in opciones else 0
+
+
+def selector_subcodigo(opciones: dict, categoria: str, key_prefix: str) -> str:
+    """Segundo desplegable con el código CIE-10 específico dentro de la categoría.
+
+    La categoría de 3 caracteres agrupa cuadros muy distintos: I21.0 (IAM anterior)
+    tiene 76.9% de tasa de UCI/UTI y I21.4 (sin elevación del ST) un 52.9%. Se ofrece
+    en cascada, filtrando solo los subcódigos que existen bajo la categoría elegida.
+    """
+    disponibles = opciones.get("subcodigos_por_categoria", {}).get(str(categoria), [])
+    desc = opciones.get("subcodigo_descripcion", {})
+    if not disponibles:
+        return "OTRO"
+    return st.selectbox(
+        "Código específico",
+        options=disponibles + ["OTRO"],
+        format_func=lambda c: ("Otro / sin especificar" if c == "OTRO"
+                               else f"{c} — {desc.get(c, '')}"[:70]),
+        key=f"{key_prefix}_subcod",
+        help="Detalle dentro de la categoría elegida. Discrimina bastante más que la categoría sola.",
+    )
+
+
 def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
     opciones = artefacto["opciones"]
     nombres_hosp = opciones["cod_hospital_nombre"]
     desc_diag = opciones["diagnostico1_descripcion"]
 
+    st.markdown('<div class="seccion">Datos del paciente y del ingreso</div>', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     with col1:
         hospital = st.selectbox(
@@ -300,24 +392,31 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
             options=opciones["cod_hospital"],
             format_func=lambda c: f"{nombres_hosp.get(c, c)} ({c})",
             key=f"{key_prefix}_hosp",
+            index=indice_por_defecto(opciones["cod_hospital"], "cod_hospital"),
         )
-        sexo = st.selectbox("Sexo", options=opciones["sexo"], key=f"{key_prefix}_sexo")
+        sexo = st.selectbox("Sexo", options=opciones["sexo"], key=f"{key_prefix}_sexo",
+            index=indice_por_defecto(opciones["sexo"], "sexo"))
         edad = st.number_input("Edad", min_value=0, max_value=110, value=60, key=f"{key_prefix}_edad")
     with col2:
         tipo_ingreso = st.selectbox(
-            "Tipo de ingreso", options=opciones["tipo_ingreso"], key=f"{key_prefix}_tingreso"
+            "Tipo de ingreso", options=opciones["tipo_ingreso"], key=f"{key_prefix}_tingreso",
+            index=indice_por_defecto(opciones["tipo_ingreso"], "tipo_ingreso")
         )
         tipo_procedencia = st.selectbox(
-            "Procedencia", options=opciones["tipo_procedencia"], key=f"{key_prefix}_tproc"
+            "Procedencia", options=opciones["tipo_procedencia"], key=f"{key_prefix}_tproc",
+            index=indice_por_defecto(opciones["tipo_procedencia"], "tipo_procedencia")
         )
     with col3:
-        prevision = st.selectbox("Previsión", options=opciones["prevision"], key=f"{key_prefix}_prev")
+        prevision = st.selectbox("Previsión", options=opciones["prevision"], key=f"{key_prefix}_prev",
+            index=indice_por_defecto(opciones["prevision"], "prevision"))
         diagnostico = st.selectbox(
             "Diagnóstico principal (CIE-10)",
             options=opciones["diagnostico1_categoria"],
             format_func=lambda c: f"{c} - {desc_diag.get(c, '')}",
             key=f"{key_prefix}_diag",
+            index=indice_por_defecto(opciones["diagnostico1_categoria"], "diagnostico1_categoria"),
         )
+        subcodigo = selector_subcodigo(opciones, diagnostico, key_prefix)
         mes = st.selectbox(
             "Mes de ingreso",
             options=list(range(1, 13)),
@@ -325,27 +424,28 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
             key=f"{key_prefix}_mes",
         )
 
-    st.markdown("###### Procedimiento y comorbilidades")
+    st.markdown('<div class="seccion">Procedimiento y comorbilidades</div>', unsafe_allow_html=True)
     st.caption(
         "El procedimiento se conoce exacto si es programado, o como intención si es de "
         "urgencia. Las comorbilidades se marcan según los diagnósticos ya conocidos."
     )
-    colp1, colp3 = st.columns(2)
-    with colp1:
-        procedimiento = st.selectbox(
-            "Procedimiento principal previsto",
-            options=opciones["procedimiento_principal"],
-            format_func=lambda c: "Sin procedimiento" if c == "SIN_PROCEDIMIENTO" else (
-                "Otro (fuera de los 200 más frecuentes)" if c == "OTRO" else c
-            ),
-            key=f"{key_prefix}_proc",
-        )
-    with colp3:
-        tiene_diabetes = st.checkbox("Diabetes", key=f"{key_prefix}_diab")
-        tiene_hipertension = st.checkbox("Hipertensión", key=f"{key_prefix}_hta")
-        tiene_erc = st.checkbox("Enfermedad renal crónica", key=f"{key_prefix}_erc")
-        tiene_epoc = st.checkbox("EPOC", key=f"{key_prefix}_epoc")
-        tiene_obesidad = st.checkbox("Obesidad", key=f"{key_prefix}_obes")
+    procedimiento = st.selectbox(
+        "Procedimiento principal previsto",
+        options=opciones["procedimiento_principal"],
+        format_func=lambda c: "Sin procedimiento" if c == "SIN_PROCEDIMIENTO" else (
+            "Otro (fuera de los 200 más frecuentes)" if c == "OTRO" else c
+        ),
+        key=f"{key_prefix}_proc",
+        index=indice_por_defecto(opciones["procedimiento_principal"], "procedimiento_principal"),
+    )
+
+    comorbilidades = {}
+    columnas = st.columns(len(GRUPOS_COMORBILIDAD))
+    for columna, (grupo, items) in zip(columnas, GRUPOS_COMORBILIDAD.items()):
+        with columna:
+            st.markdown(f"**{grupo}**")
+            for campo, etiqueta in items:
+                comorbilidades[campo] = int(st.checkbox(etiqueta, key=f"{key_prefix}_{campo}"))
 
     st.caption(
         "Severidad APR (según Módulo APR CC/MCC del IR-GRD chileno) — marca si algún "
@@ -373,15 +473,12 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
         "tipo_procedencia": tipo_procedencia,
         "tipo_ingreso": tipo_ingreso,
         "diagnostico1_categoria": diagnostico,
+        "diagnostico1_subcodigo": subcodigo,
         "procedimiento_principal": procedimiento,
         "tiene_mcc": int(tiene_mcc),
         "tiene_cc": int(tiene_cc),
         "nivel_severidad_potencial": nivel_severidad_potencial,
-        "tiene_diabetes": int(tiene_diabetes),
-        "tiene_hipertension": int(tiene_hipertension),
-        "tiene_erc": int(tiene_erc),
-        "tiene_epoc": int(tiene_epoc),
-        "tiene_obesidad": int(tiene_obesidad),
+        **comorbilidades,
     }
 
 
@@ -399,20 +496,22 @@ def tab_caso_individual(artefacto):
         et_clin, col_clin = clasificar_riesgo(p_clin, clinico["umbrales_semaforo"])
 
         c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("#### 🏥 Probabilidad de cama crítica")
-            st.caption("Pregunta de **recurso**: ¿el destino tiene dónde ponerlo?")
-            st.plotly_chart(gauge_riesgo(p_cama, cama["umbrales_semaforo"], col_cama),
-                            width="stretch", key="g_cama")
-            st.markdown(f"### {et_cama}")
-            st.caption(f"Tasa histórica de referencia: {cama['tasa_base_2024']*100:.1f}%.")
-        with c2:
-            st.markdown("#### 🩺 Riesgo de desenlace adverso")
-            st.caption("Pregunta **clínica**: ¿este traslado es seguro? (UCI/UTI o fallecimiento)")
-            st.plotly_chart(gauge_riesgo(p_clin, clinico["umbrales_semaforo"], col_clin),
-                            width="stretch", key="g_clin")
-            st.markdown(f"### {et_clin}")
-            st.caption(f"Tasa histórica de referencia: {clinico['tasa_base_2024']*100:.1f}%.")
+        for columna, bloque, prob, etiqueta, color, clave, titulo, sub in [
+            (c1, cama, p_cama, et_cama, col_cama, "g_cama", "Probabilidad de cama crítica",
+             "Pregunta de <b>recurso</b>: ¿el destino tiene dónde ponerlo?"),
+            (c2, clinico, p_clin, et_clin, col_clin, "g_clin", "Riesgo de desenlace adverso",
+             "Pregunta <b>clínica</b>: ¿este traslado es seguro? (UCI/UTI o fallecimiento)"),
+        ]:
+            with columna:
+                with st.container(border=True):
+                    st.markdown(
+                        f'<div class="titulo">{titulo}</div><div class="sub">{sub}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.plotly_chart(gauge_riesgo(prob, bloque["umbrales_semaforo"], color),
+                                    width="stretch", key=clave)
+                    st.markdown(f"### {etiqueta}")
+                    st.caption(f"Tasa histórica de referencia: {bloque['tasa_base_2024']*100:.1f}%.")
 
         divergencia = (p_clin - p_cama) * 100
         if divergencia >= DIVERGENCIA_ALERTA_PP:
@@ -431,35 +530,6 @@ def tab_caso_individual(artefacto):
 
         st.markdown("#### ¿Por qué este resultado?")
         panel_explicabilidad(datos, artefacto)
-
-    st.divider()
-    with st.expander("🏛️ Comparar con Norma Nacional MINSAL 2018-2019 (opcional, si ya hay un GRD codificado)"):
-        st.caption(
-            "Si el codificador ya tiene un GRD provisional asignado a partir de la evolución médica, "
-            "acá se puede consultar la norma nacional oficial para ese GRD exacto (estancia esperada, "
-            "percentiles, tasa de Exitus histórica nacional) como contexto adicional al score del modelo."
-        )
-        norma = cargar_norma_minsal()
-        opciones_grd = sorted(norma.keys())
-        cod_grd = st.selectbox(
-            "Código GRD",
-            options=opciones_grd,
-            format_func=lambda c: f"{c} - {norma[c]['descripcion']}",
-            index=None,
-            placeholder="Buscar código o descripción...",
-            key="grd_norma",
-        )
-        if cod_grd:
-            n = norma[cod_grd]
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Tasa de Exitus nacional", f"{n['tasa_exitus']:.1f}%", help=f"{n['exitus']:,} de {n['total_altas']:,} altas")
-            c2.metric("Estancia media esperada", f"{n['est_media_depurada']:.1f} días")
-            c3.metric("Percentil 50 (mediana)", f"{n['p50']} días")
-            c4.metric("Punto de corte outlier", f"{n['corte_sup']} días")
-            st.caption(
-                f"Gravedad {n['gravedad']} — percentiles de estancia: P25={n['p25']}, P50={n['p50']}, "
-                f"P75={n['p75']} días. Basado en {n['total_altas']:,} altas a nivel nacional (2018-2019)."
-            )
 
 
 def tab_cola(artefacto):
@@ -571,19 +641,19 @@ def tab_sobre_el_modelo(artefacto):
     """)
 
     st.markdown("#### Los dos modelos")
-    filas = []
+    # markdown en vez de st.dataframe: la tabla es de 2 filas y el dataframe
+    # se renderizaba con las columnas colapsadas y las métricas invisibles.
+    filas = ["| Modelo | ROC-AUC | Average Precision | Tasa base | AUC traslados | AP traslados |",
+             "|---|---|---|---|---|---|"]
     for clave in ("cama_critica", "riesgo_clinico"):
         b = artefacto[clave]
         mt = b.get("metricas_traslados_2024") or {}
-        filas.append({
-            "Modelo": b["etiqueta"],
-            "ROC-AUC": f"{b['metricas_test_2024']['roc_auc']:.3f}",
-            "Average Precision": f"{b['metricas_test_2024']['average_precision']:.3f}",
-            "Tasa base": f"{b['tasa_base_2024']*100:.1f}%",
-            "AUC (solo traslados)": f"{mt.get('roc_auc', float('nan')):.3f}",
-            "AP (solo traslados)": f"{mt.get('average_precision', float('nan')):.3f}",
-        })
-    st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
+        filas.append(
+            f"| {b['etiqueta']} | **{b['metricas_test_2024']['roc_auc']:.3f}** | "
+            f"**{b['metricas_test_2024']['average_precision']:.3f}** | {b['tasa_base_2024']*100:.1f}% | "
+            f"{mt.get('roc_auc', float('nan')):.3f} | {mt.get('average_precision', float('nan')):.3f} |"
+        )
+    st.markdown("\n".join(filas))
 
     with st.expander("⚠️ Por qué hacen falta DOS puntajes y no uno", expanded=True):
         st.markdown("""
@@ -689,10 +759,15 @@ def tab_sobre_el_modelo(artefacto):
 def main():
     artefacto = cargar_modelo()
 
-    st.title("🏥 Priorización de Camas Críticas (UCI/UTI)")
-    st.caption(
-        "Maqueta de apoyo a la gestión clínica — estima la probabilidad de que un paciente "
-        "requiera cama crítica según patrones históricos de casos GRD similares."
+    st.markdown(
+        '<div class="cabecera">'
+        '<span class="etiqueta">Prototipo · datos GRD públicos de Chile</span>'
+        "<h1>Priorización de camas críticas</h1>"
+        "<p>Estima el riesgo de un paciente al momento de decidir su traslado entre "
+        "instituciones, a partir de patrones históricos de 5,8 millones de egresos "
+        "hospitalarios. No reemplaza el juicio clínico.</p>"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
     tab1, tab2, tab3 = st.tabs(["🧑‍⚕️ Evaluar caso individual", "📋 Cola de priorización", "📊 Sobre el modelo"])
