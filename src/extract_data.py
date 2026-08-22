@@ -3,13 +3,14 @@ Extrae features de ingreso y la etiqueta 'necesito_uci_uti' desde las bases
 GRD públicas de Chile, leyendo directamente los .txt originales (no se copian
 localmente) y guardando solo un parquet chico con los datos ya resumidos.
 
-Fuente de datos (no tocar / no copiar):
-    /Users/felipemunoz/Desktop/PROGRAMACION/GRD_EN_R/bases de datos GRD/
+Los .txt crudos (~4 GB) se descargan del portal público del DEIS y NO se copian
+al repositorio. Se indica dónde están con la variable de entorno GRD_DIR:
 
-Procesa un año a la vez y guarda cada uno en su propio parquet (data/por_anio/).
-Esto es necesario porque macOS evicta automáticamente los .txt de vuelta a
-iCloud cuando el disco tiene poco espacio libre -- si un año ya fue procesado
-antes, no hace falta que su .txt siga materializado localmente.
+    export GRD_DIR="/ruta/a/bases de datos GRD"
+
+Procesa un año a la vez y guarda cada uno en su propio parquet (data/por_anio/),
+de modo que un año ya procesado no requiere que su .txt siga disponible. Esto
+importa cuando el sistema de archivos evicta los originales por falta de espacio.
 
 QUÉ ES FEATURE Y QUÉ NO
 -----------------------
@@ -40,18 +41,15 @@ from pathlib import Path
 import duckdb
 
 PROYECTO = str(Path(__file__).resolve().parent.parent)
-# Se prueban en orden: la fuente externa primero. macOS evicta los .txt a iCloud
-# cuando falta disco, y no siempre evicta la misma copia, así que se usa la que
-# esté materializada en vez de forzar un brctl download de 4 GB.
+# Se usa la primera ruta donde el archivo esté realmente materializado.
 RUTAS_BASE = [
     os.environ.get("GRD_DIR", ""),
     f"{PROYECTO}/bases de datos GRD",
-    "/Users/felipemunoz/Desktop/PROGRAMACION/GRD_EN_R/bases de datos GRD",
 ]
 DIR_POR_ANIO = f"{PROYECTO}/data/por_anio"
 SALIDA = f"{PROYECTO}/data/admisiones.parquet"
 
-# encoding detectado por archivo (ver GRD_EN_R/modelo_de_mortalidad para precedente)
+# encoding detectado por archivo: el DEIS cambió de formato entre años
 ARCHIVOS = [
     ("GRD_PUBLICO_2019.txt", "utf-8", 2019),
     ("GRD_PUBLICO_2020.txt", "utf-8", 2020),
