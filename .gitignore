@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+
+# Fuentes GRD crudas: ~4 GB, se descargan del portal público del DEIS.
+bases de datos GRD/
+data/por_anio/
+data/por_anio_v1_respaldo/
+
+# Parquet intermedio (73 MB). Se regenera con src/extract_data.py.
+data/admisiones.parquet
+
+# PDF de referencia, no necesario para reproducir
+CIE9_Procedimientos_y_Morfologias.pdf
+PENDIENTE.md
