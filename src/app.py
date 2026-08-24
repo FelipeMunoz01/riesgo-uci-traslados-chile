@@ -26,47 +26,67 @@ MODELO_PATH = RAIZ / "models" / "modelo_riesgo_uci.joblib"
 
 ESTILOS = """
 <style>
-  /* Streamlit deja mucho aire arriba y centra en un ancho estrecho; se recupera
-     espacio útil y se fija un máximo cómodo de lectura. */
-  .block-container { padding-top: 2.2rem; padding-bottom: 4rem; max-width: 1180px; }
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  html, body, [class*="css"], .stMarkdown, .stSelectbox, .stButton, input, label {
+    font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif !important;
+  }
+  .block-container { padding-top: 0 !important; padding-bottom: 4rem; max-width: 1240px; }
   #MainMenu, footer, header [data-testid="stStatusWidget"] { visibility: hidden; }
 
-  /* Encabezado propio en vez del st.title genérico */
-  .cabecera { border-bottom: 1px solid #E2E8F0; padding-bottom: 1.1rem; margin-bottom: 1.6rem; }
-  .cabecera h1 { font-size: 1.85rem; font-weight: 650; letter-spacing: -0.02em;
-                 color: #0F172A; margin: 0 0 .35rem 0; line-height: 1.2; }
-  .cabecera p  { color: #64748B; font-size: .93rem; margin: 0; max-width: 62ch; line-height: 1.5; }
-  .cabecera .etiqueta { display: inline-block; font-size: .7rem; font-weight: 600;
-                        letter-spacing: .06em; text-transform: uppercase; color: #0E7490;
-                        background: #ECFEFF; border: 1px solid #A5F3FC;
-                        padding: .18rem .5rem; border-radius: 4px; margin-bottom: .6rem; }
+  /* --- Encabezado: banda oscura a sangre, no un título suelto --- */
+  .cabecera {
+    background: linear-gradient(135deg, #0B2B33 0%, #12414B 60%, #0E7490 100%);
+    margin: 0 -999rem 2rem -999rem; padding: 2.6rem 999rem 2.2rem 999rem;
+    border-bottom: 3px solid #22D3EE;
+  }
+  .cabecera h1 { font-size: 2.3rem; font-weight: 700; letter-spacing: -0.035em;
+                 color: #FFFFFF; margin: .5rem 0 .5rem 0; line-height: 1.08; }
+  .cabecera p  { color: #A5D8E3; font-size: .97rem; margin: 0; max-width: 60ch; line-height: 1.55; }
+  .cabecera .etiqueta { font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+                        font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
+                        color: #67E8F9; }
+  .cabecera .cifras { display: flex; gap: 2.4rem; margin-top: 1.5rem; }
+  .cabecera .cifra .n { font-family: 'IBM Plex Mono', monospace; font-size: 1.35rem;
+                        font-weight: 600; color: #FFFFFF; line-height: 1; }
+  .cabecera .cifra .t { font-size: .72rem; color: #7DA9B5; text-transform: uppercase;
+                        letter-spacing: .08em; margin-top: .3rem; }
 
-  /* Pestañas con aspecto de navegación, no de botones sueltos */
-  .stTabs [data-baseweb="tab-list"] { gap: 1.6rem; border-bottom: 1px solid #E2E8F0; }
-  .stTabs [data-baseweb="tab"] { padding: .55rem 0; font-weight: 500; }
+  .stTabs [data-baseweb="tab-list"] { gap: 2rem; border-bottom: 1px solid #E2E8F0; }
+  .stTabs [data-baseweb="tab"] { padding: .6rem 0; font-weight: 550; }
 
-  /* Tarjetas para los dos puntajes */
-  .tarjeta { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
-             padding: 1.1rem 1.3rem .5rem 1.3rem; height: 100%; }
-  .tarjeta .titulo { font-size: 1.02rem; font-weight: 600; color: #0F172A; margin-bottom: .15rem; }
-  .tarjeta .sub    { font-size: .82rem; color: #64748B; margin-bottom: .3rem; line-height: 1.45; }
+  /* --- Medidor de riesgo propio --- */
+  .medidor { text-align: center; padding: .2rem 0 .6rem 0; }
+  .medidor .valor { font-family: 'IBM Plex Mono', monospace; font-size: 3.1rem;
+                    font-weight: 600; letter-spacing: -.04em; line-height: 1; }
+  .medidor .nivel { font-size: .78rem; font-weight: 650; letter-spacing: .1em;
+                    text-transform: uppercase; margin-top: .5rem; }
+  .barra { position: relative; height: 8px; border-radius: 99px; margin: 1.3rem 0 .45rem 0;
+           background: linear-gradient(90deg, #86EFAC 0%, #FDE68A 45%, #FCA5A5 100%); }
+  .barra .aguja { position: absolute; top: -5px; width: 3px; height: 18px;
+                  background: #0F172A; border-radius: 2px; transform: translateX(-50%); }
+  .barra .base { position: absolute; top: -2px; width: 2px; height: 12px;
+                 background: rgba(15,23,42,.28); transform: translateX(-50%); }
+  .escala { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace;
+            font-size: .64rem; color: #94A3B8; }
 
-  /* Secciones del formulario */
-  .seccion { font-size: .74rem; font-weight: 650; letter-spacing: .07em;
-             text-transform: uppercase; color: #94A3B8;
-             margin: 1.7rem 0 .5rem 0; padding-bottom: .35rem;
-             border-bottom: 1px solid #F1F5F9; }
+  .panel { border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.3rem 1.4rem 1rem 1.4rem;
+           background: #FFFFFF; height: 100%; }
+  .panel .titulo { font-size: 1.05rem; font-weight: 650; color: #0F172A; letter-spacing: -.01em; }
+  .panel .sub    { font-size: .81rem; color: #64748B; margin: .18rem 0 .1rem 0; line-height: 1.45; }
+  .panel .pie    { font-size: .74rem; color: #94A3B8; margin-top: .5rem; }
 
-  /* Casillas de comorbilidad más compactas: son 19 */
+  .seccion { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; font-weight: 600;
+             letter-spacing: .13em; text-transform: uppercase; color: #0E7490;
+             margin: 2rem 0 .6rem 0; padding-bottom: .4rem; border-bottom: 1px solid #E2E8F0; }
+
   .stCheckbox { margin-bottom: -.55rem; }
   .stCheckbox label p { font-size: .87rem; }
-
-  /* El botón principal con más presencia */
-  .stButton button[kind="primary"] { padding: .5rem 1.5rem; font-weight: 600; }
-
-  div[data-testid="stMetricValue"] { font-size: 1.25rem; }
+  .stButton button[kind="primary"] { padding: .55rem 1.7rem; font-weight: 600; border-radius: 8px; }
+  div[data-testid="stMetricValue"] { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; }
 </style>
 """
+
 
 st.set_page_config(
     page_title="Priorización de Camas Críticas UCI/UTI",
@@ -147,35 +167,35 @@ def cargar_modelo():
 
 def clasificar_riesgo(p, umbrales):
     if p >= umbrales["rojo"]:
-        return "🔴 Alto", "#e74c3c"
+        return "Alto", "#DC2626"
     elif p >= umbrales["amarillo"]:
-        return "🟡 Medio", "#f39c12"
+        return "Medio", "#D97706"
     else:
-        return "🟢 Bajo", "#2ecc71"
+        return "Bajo", "#059669"
 
 
-def gauge_riesgo(p, umbrales, color):
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=p * 100,
-        number={"suffix": "%", "font": {"size": 34, "color": "#0F172A"}},
-        gauge={
-            "axis": {"range": [0, 100], "tickcolor": "#CBD5E1", "tickfont": {"size": 10}},
-            "bar": {"color": color, "thickness": 0.68},
-            "bgcolor": "rgba(0,0,0,0)",
-            "borderwidth": 0,
-            "steps": [
-                {"range": [0, umbrales["amarillo"] * 100], "color": "rgba(46,204,113,0.25)"},
-                {"range": [umbrales["amarillo"] * 100, umbrales["rojo"] * 100], "color": "rgba(243,156,18,0.25)"},
-                {"range": [umbrales["rojo"] * 100, 100], "color": "rgba(231,76,60,0.25)"},
-            ],
-        },
-    ))
-    fig.update_layout(
-        height=185, margin=dict(l=24, r=24, t=6, b=0),
-        paper_bgcolor="rgba(0,0,0,0)", font=dict(family="sans-serif", color="#475569"),
-    )
-    return fig
+def medidor_riesgo(p, umbrales, tasa_base, etiqueta, color) -> str:
+    """Medidor propio: cifra grande + barra con la aguja del paciente y una marca
+    en la tasa base. Reemplaza el gauge de Plotly, que era el elemento con más
+    aspecto de dashboard genérico y no dejaba comparar contra la referencia.
+
+    La escala se corta en el percentil 90 del score (umbral rojo) x 1.4 en vez de
+    llegar a 100%: casi ningún caso pasa de ahí y comprimir todo contra el extremo
+    izquierdo hacía ilegible la diferencia entre pacientes.
+    """
+    tope = max(umbrales["rojo"] * 1.4, p * 1.08, 0.25)
+    pos = lambda x: min(max(x / tope, 0), 1) * 100
+    return f"""
+    <div class="medidor">
+      <div class="valor" style="color:{color}">{p * 100:.1f}<span style="font-size:1.5rem">%</span></div>
+      <div class="nivel" style="color:{color}">Riesgo {etiqueta.lower()}</div>
+      <div class="barra">
+        <div class="base" style="left:{pos(tasa_base)}%" title="Tasa histórica"></div>
+        <div class="aguja" style="left:{pos(p)}%"></div>
+      </div>
+      <div class="escala"><span>0%</span><span>referencia {tasa_base * 100:.0f}%</span><span>{tope * 100:.0f}%</span></div>
+    </div>
+    """
 
 
 def construir_input(datos: dict, artefacto: dict) -> pd.DataFrame:
@@ -503,15 +523,15 @@ def tab_caso_individual(artefacto):
              "Pregunta <b>clínica</b>: ¿este traslado es seguro? (UCI/UTI o fallecimiento)"),
         ]:
             with columna:
-                with st.container(border=True):
-                    st.markdown(
-                        f'<div class="titulo">{titulo}</div><div class="sub">{sub}</div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.plotly_chart(gauge_riesgo(prob, bloque["umbrales_semaforo"], color),
-                                    width="stretch", key=clave)
-                    st.markdown(f"### {etiqueta}")
-                    st.caption(f"Tasa histórica de referencia: {bloque['tasa_base_2024']*100:.1f}%.")
+                st.markdown(
+                    f'<div class="panel">'
+                    f'<div class="titulo">{titulo}</div><div class="sub">{sub}</div>'
+                    + medidor_riesgo(prob, bloque["umbrales_semaforo"],
+                                     bloque["tasa_base_2024"], etiqueta, color)
+                    + f'<div class="pie">La marca gris es la tasa histórica de este grupo '
+                      f'de hospitales ({bloque["tasa_base_2024"]*100:.1f}%).</div></div>',
+                    unsafe_allow_html=True,
+                )
 
         divergencia = (p_clin - p_cama) * 100
         if divergencia >= DIVERGENCIA_ALERTA_PP:
@@ -758,14 +778,20 @@ def tab_sobre_el_modelo(artefacto):
 
 def main():
     artefacto = cargar_modelo()
+    auc = artefacto["cama_critica"]["metricas_test_2024"]["roc_auc"]
 
     st.markdown(
         '<div class="cabecera">'
-        '<span class="etiqueta">Prototipo · datos GRD públicos de Chile</span>'
+        '<div class="etiqueta">Prototipo · datos GRD públicos · DEIS / MINSAL Chile</div>'
         "<h1>Priorización de camas críticas</h1>"
-        "<p>Estima el riesgo de un paciente al momento de decidir su traslado entre "
-        "instituciones, a partir de patrones históricos de 5,8 millones de egresos "
-        "hospitalarios. No reemplaza el juicio clínico.</p>"
+        "<p>Estima el riesgo de un paciente en el momento de decidir su traslado entre "
+        "instituciones, a partir de patrones históricos de egresos hospitalarios. "
+        "No reemplaza el juicio clínico.</p>"
+        '<div class="cifras">'
+        '<div class="cifra"><div class="n">5,8 M</div><div class="t">egresos analizados</div></div>'
+        '<div class="cifra"><div class="n">62</div><div class="t">hospitales</div></div>'
+        f'<div class="cifra"><div class="n">{auc:.3f}</div><div class="t">ROC-AUC en 2024</div></div>'
+        '</div>'
         "</div>",
         unsafe_allow_html=True,
     )
