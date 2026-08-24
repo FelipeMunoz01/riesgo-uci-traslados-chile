@@ -177,23 +177,23 @@ COMORBILIDAD_IMPLICA_CC = {
 # comorbilidad cronica cubre. El orden y la seleccion salen de contar su frecuencia
 # real en los diagnosticos secundarios de 2024.
 CONDICIONES_MCC = [
-    ("mcc_insuf_respiratoria", "Insuficiencia respiratoria aguda", "62.107 casos en 2024, el MCC mas frecuente"),
-    ("mcc_insuf_renal_aguda", "Insuficiencia renal aguda", "N17, incluye la que requiere dialisis de urgencia"),
-    ("mcc_sepsis", "Sepsis o shock septico", "A41 y R57.2"),
-    ("mcc_icc_descompensada", "Insuficiencia cardiaca descompensada", "I50.0 o I50.1, edema agudo de pulmon"),
-    ("mcc_erc_terminal", "ERC etapa 5 o en dialisis", "N18.5 o Z99.2"),
-    ("mcc_hemorragia", "Hemorragia aguda significativa", "D62, con repercusion hemodinamica"),
+    ("mcc_insuf_respiratoria", "Insuficiencia respiratoria aguda", "62.107 casos en 2024, el MCC más frecuente"),
+    ("mcc_insuf_renal_aguda", "Insuficiencia renal aguda", "N17, incluye la que requiere diálisis de urgencia"),
+    ("mcc_sepsis", "Sepsis o shock séptico", "A41 y R57.2"),
+    ("mcc_icc_descompensada", "Insuficiencia cardíaca descompensada", "I50.0 o I50.1, edema agudo de pulmón"),
+    ("mcc_erc_terminal", "ERC etapa 5 o en diálisis", "N18.5 o Z99.2"),
+    ("mcc_hemorragia", "Hemorragia aguda significativa", "D62, con repercusión hemodinámica"),
     ("mcc_compromiso_conciencia", "Compromiso de conciencia o convulsiones", "R40.2, G40 o G93"),
-    ("mcc_complicacion_proc", "Complicacion de un procedimiento previo", "T81, incluye infeccion de sitio quirurgico"),
+    ("mcc_complicacion_proc", "Complicación de un procedimiento previo", "T81, incluye infección de sitio quirúrgico"),
 ]
 
 CONDICIONES_CC = [
-    ("cc_infeccion_urinaria", "Infeccion urinaria", "N39.0"),
-    ("cc_alteracion_electrolitica", "Alteracion electrolitica", "E87, hiponatremia o hipokalemia"),
+    ("cc_infeccion_urinaria", "Infección urinaria", "N39.0"),
+    ("cc_alteracion_electrolitica", "Alteración electrolítica", "E87, hiponatremia o hipokalemia"),
     ("cc_derrame_pleural", "Derrame pleural", "J90"),
     ("cc_trastorno_alcohol", "Trastorno por consumo de alcohol", "F10"),
-    ("cc_depresion", "Depresion o trastorno del animo", "F32"),
-    ("cc_delirium", "Delirium o sindrome confusional", "F05"),
+    ("cc_depresion", "Depresión o trastorno del ánimo", "F32"),
+    ("cc_delirium", "Delirium o síndrome confusional", "F05"),
 ]
 
 
@@ -504,9 +504,9 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
             for campo, etiqueta in items:
                 comorbilidades[campo] = int(st.checkbox(etiqueta, key=f"{key_prefix}_{campo}"))
 
-    st.markdown('<div class="seccion">Situacion aguda del episodio</div>', unsafe_allow_html=True)
+    st.markdown('<div class="seccion">Situación aguda del episodio</div>', unsafe_allow_html=True)
     st.caption(
-        "Marca lo que este cursando ahora. De aqui y de las comorbilidades de arriba se "
+        "Marca lo que esté cursando ahora. De aquí y de las comorbilidades de arriba se "
         "deduce la severidad APR (CC / MCC) del agrupador IR-GRD, sin que tengas que "
         "clasificarla a mano."
     )
