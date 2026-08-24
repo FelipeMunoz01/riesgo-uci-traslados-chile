@@ -159,6 +159,43 @@ GRUPOS_COMORBILIDAD = {
 }
 COMORBILIDADES = [c for grupo in GRUPOS_COMORBILIDAD.values() for c, _ in grupo]
 
+# La severidad APR del IR-GRD se expresa con dos banderas, CC y MCC. Pedirle al
+# usuario que sepa cuál corresponde es pedirle que haga el trabajo del modelo, así
+# que se deducen de las condiciones concretas que ya marcó.
+#
+# Buena parte de las comorbilidades cronicas de arriba YA figuran en la tabla CC del
+# IR-GRD, y dos de ellas en la tabla MCC. El mapeo sale de comparar los prefijos de
+# extract_data.py contra CC_PREFIJOS y MCC_PREFIJOS.
+COMORBILIDAD_IMPLICA_MCC = {"tiene_cancer_metastasico", "tiene_desnutricion", "tiene_inmunosupresion"}
+COMORBILIDAD_IMPLICA_CC = {
+    "tiene_diabetes", "tiene_erc", "tiene_epoc", "tiene_asma", "tiene_anemia",
+    "tiene_cardiopatia_isquemica", "tiene_arritmia", "tiene_insuf_cardiaca",
+    "tiene_cancer", "tiene_hepatopatia", "tiene_demencia",
+}
+
+# Condiciones agudas del episodio, las que de verdad disparan un MCC y que ninguna
+# comorbilidad cronica cubre. El orden y la seleccion salen de contar su frecuencia
+# real en los diagnosticos secundarios de 2024.
+CONDICIONES_MCC = [
+    ("mcc_insuf_respiratoria", "Insuficiencia respiratoria aguda", "62.107 casos en 2024, el MCC mas frecuente"),
+    ("mcc_insuf_renal_aguda", "Insuficiencia renal aguda", "N17, incluye la que requiere dialisis de urgencia"),
+    ("mcc_sepsis", "Sepsis o shock septico", "A41 y R57.2"),
+    ("mcc_icc_descompensada", "Insuficiencia cardiaca descompensada", "I50.0 o I50.1, edema agudo de pulmon"),
+    ("mcc_erc_terminal", "ERC etapa 5 o en dialisis", "N18.5 o Z99.2"),
+    ("mcc_hemorragia", "Hemorragia aguda significativa", "D62, con repercusion hemodinamica"),
+    ("mcc_compromiso_conciencia", "Compromiso de conciencia o convulsiones", "R40.2, G40 o G93"),
+    ("mcc_complicacion_proc", "Complicacion de un procedimiento previo", "T81, incluye infeccion de sitio quirurgico"),
+]
+
+CONDICIONES_CC = [
+    ("cc_infeccion_urinaria", "Infeccion urinaria", "N39.0"),
+    ("cc_alteracion_electrolitica", "Alteracion electrolitica", "E87, hiponatremia o hipokalemia"),
+    ("cc_derrame_pleural", "Derrame pleural", "J90"),
+    ("cc_trastorno_alcohol", "Trastorno por consumo de alcohol", "F10"),
+    ("cc_depresion", "Depresion o trastorno del animo", "F32"),
+    ("cc_delirium", "Delirium o sindrome confusional", "F05"),
+]
+
 
 @st.cache_resource
 def cargar_modelo():
@@ -467,21 +504,43 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
             for campo, etiqueta in items:
                 comorbilidades[campo] = int(st.checkbox(etiqueta, key=f"{key_prefix}_{campo}"))
 
+    st.markdown('<div class="seccion">Situacion aguda del episodio</div>', unsafe_allow_html=True)
     st.caption(
-        "Severidad APR (según Módulo APR CC/MCC del IR-GRD chileno). Marca si algún "
-        "diagnóstico secundario ya codificado corresponde a alguna de estas categorías:"
+        "Marca lo que este cursando ahora. De aqui y de las comorbilidades de arriba se "
+        "deduce la severidad APR (CC / MCC) del agrupador IR-GRD, sin que tengas que "
+        "clasificarla a mano."
     )
-    colm1, colm2 = st.columns(2)
-    with colm1:
-        tiene_mcc = st.checkbox(
-            "Tiene MCC (complicación/comorbilidad MAYOR)", key=f"{key_prefix}_mcc",
-            help="Ej: shock séptico, sepsis, insuficiencia respiratoria aguda, IRA, desnutrición moderada-severa.",
-        )
-    with colm2:
-        tiene_cc = st.checkbox(
-            "Tiene CC (complicación/comorbilidad, sin MCC)", key=f"{key_prefix}_cc",
-            help="Ej: FA, EPOC exacerbado, ERC etapa 3-4, delirium, anemia activa.",
-        )
+    agudas = {}
+    cols_mcc = st.columns(2)
+    for i, (campo, etiqueta, ayuda) in enumerate(CONDICIONES_MCC):
+        with cols_mcc[i % 2]:
+            agudas[campo] = st.checkbox(etiqueta, key=f"{key_prefix}_{campo}", help=ayuda)
+    st.markdown('<div style="height:.6rem"></div>', unsafe_allow_html=True)
+    cols_cc = st.columns(3)
+    for i, (campo, etiqueta, ayuda) in enumerate(CONDICIONES_CC):
+        with cols_cc[i % 3]:
+            agudas[campo] = st.checkbox(etiqueta, key=f"{key_prefix}_{campo}", help=ayuda)
+
+    tiene_mcc = int(
+        any(agudas[c] for c, _, _ in CONDICIONES_MCC)
+        or any(comorbilidades[c] for c in COMORBILIDAD_IMPLICA_MCC)
+    )
+    tiene_cc = int(
+        any(agudas[c] for c, _, _ in CONDICIONES_CC)
+        or any(comorbilidades[c] for c in COMORBILIDAD_IMPLICA_CC)
+    )
+    resumen = {
+        (1, 1): ("Nivel 3, con MCC", "#DC2626"),
+        (1, 0): ("Nivel 3, con MCC", "#DC2626"),
+        (0, 1): ("Nivel 2, con CC", "#D97706"),
+        (0, 0): ("Nivel 1, sin CC ni MCC", "#059669"),
+    }[(tiene_mcc, tiene_cc)]
+    st.markdown(
+        f'<div style="margin:.7rem 0 .2rem 0;font-size:.85rem;color:#475569">'
+        f'Severidad APR deducida: <b style="color:{resumen[1]}">{resumen[0]}</b></div>',
+        unsafe_allow_html=True,
+    )
+
     nivel_severidad_potencial = 3 if tiene_mcc else (2 if tiene_cc else 1)
 
     return {
