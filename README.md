@@ -1,12 +1,12 @@
-# Predictor de riesgo de cama crítica (UCI/UTI) — GRD Chile
+# Predictor de riesgo de cama crítica (UCI/UTI) con datos GRD de Chile
 
 **▶️ [Probar la aplicación](https://riesgo-uci-traslados-chile.streamlit.app)**
 
 Modelo y aplicación para estimar, **al momento de decidir el traslado de un paciente
 entre instituciones**, dos cosas distintas:
 
-- **Probabilidad de cama crítica** — pregunta de recurso: ¿el hospital de destino tiene dónde ponerlo?
-- **Riesgo de desenlace adverso** — pregunta clínica: ¿este traslado es seguro?
+- **Probabilidad de cama crítica**, pregunta de recurso: ¿el hospital de destino tiene dónde ponerlo?
+- **Riesgo de desenlace adverso**, pregunta clínica: ¿este traslado es seguro?
 
 Construido sobre los egresos hospitalarios públicos GRD de Chile (DEIS/MINSAL, 2019-2024):
 **5,8 millones de admisiones, 62 hospitales** con unidad crítica propia.
@@ -85,7 +85,7 @@ casos que un comité debe revisar dos veces.
 Restringido a la población objetivo (102.476 pacientes trasladados desde otra institución):
 **AUC 0,908 · AP 0,818**.
 
-Entrenamiento 2020-2023 (2,93 M admisiones), evaluación en **2024** — un año completo no
+Entrenamiento 2020-2023 (2,93 M admisiones), evaluación en **2024**, un año completo no
 visto durante el entrenamiento, en vez de un split aleatorio.
 
 ---
@@ -158,4 +158,4 @@ python src/train_model.py         # ~5 min, entrena los dos modelos
 
 ---
 
-Datos: [DEIS / MINSAL Chile](https://deis.minsal.cl/) — egresos hospitalarios GRD, uso público.
+Datos: [DEIS / MINSAL Chile](https://deis.minsal.cl/). Egresos hospitalarios GRD, de uso público.

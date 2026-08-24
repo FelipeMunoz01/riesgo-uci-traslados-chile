@@ -393,7 +393,7 @@ def selector_subcodigo(opciones: dict, categoria: str, key_prefix: str) -> str:
         "Código específico",
         options=disponibles + ["OTRO"],
         format_func=lambda c: ("Otro / sin especificar" if c == "OTRO"
-                               else f"{c} — {desc.get(c, '')}"[:70]),
+                               else f"{c}: {desc.get(c, '')}"[:70]),
         key=f"{key_prefix}_subcod",
         help="Detalle dentro de la categoría elegida. Discrimina bastante más que la categoría sola.",
     )
@@ -468,7 +468,7 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
                 comorbilidades[campo] = int(st.checkbox(etiqueta, key=f"{key_prefix}_{campo}"))
 
     st.caption(
-        "Severidad APR (según Módulo APR CC/MCC del IR-GRD chileno) — marca si algún "
+        "Severidad APR (según Módulo APR CC/MCC del IR-GRD chileno). Marca si algún "
         "diagnóstico secundario ya codificado corresponde a alguna de estas categorías:"
     )
     colm1, colm2 = st.columns(2)
@@ -539,14 +539,14 @@ def tab_caso_individual(artefacto):
                 f"**Revisar con atención: divergencia de {divergencia:.1f} puntos.** El riesgo "
                 f"clínico ({p_clin*100:.1f}%) supera bastante la probabilidad de cama crítica "
                 f"({p_cama*100:.1f}%). A pacientes con este perfil históricamente se les asignó "
-                f"cama crítica con menos frecuencia de lo que su desenlace sugeriría — es un patrón "
+                f"cama crítica con menos frecuencia de lo que su desenlace sugeriría, es un patrón "
                 f"típico en adultos mayores y pacientes frágiles. La decisión de traslado no "
                 f"debería apoyarse solo en la disponibilidad de cama."
             )
 
-        nivel_txt = {1: "1 — Sin CC/MCC", 2: "2 — Con CC", 3: "3 — Con MCC"}[datos["nivel_severidad_potencial"]]
+        nivel_txt = {1: "1: Sin CC/MCC", 2: "2: Con CC", 3: "3: Con MCC"}[datos["nivel_severidad_potencial"]]
         st.metric("Nivel de severidad APR potencial", nivel_txt)
-        st.caption("Según reglas CC/MCC del Módulo APR (IR-GRD Chile) — misma lógica del agrupador real.")
+        st.caption("Según reglas CC/MCC del Módulo APR (IR-GRD Chile), misma lógica del agrupador real.")
 
         st.markdown("#### ¿Por qué este resultado?")
         panel_explicabilidad(datos, artefacto)
@@ -655,9 +655,9 @@ def tab_sobre_el_modelo(artefacto):
     el entrenamiento. Se excluyeron los hospitales sin unidad crítica propia, porque derivan a
     sus pacientes a otro centro y eso contaminaría la etiqueta.
 
-    **Esta herramienta usa solo el código de diagnóstico y variables administrativas de ingreso
-    — no reemplaza signos vitales ni el juicio clínico.** Es un prototipo para apoyar la
-    priorización, no un dispositivo médico validado.
+    **Esta herramienta usa solo el código de diagnóstico y variables administrativas de
+    ingreso, no reemplaza signos vitales ni el juicio clínico.** Es un prototipo para
+    apoyar la priorización, no un dispositivo médico validado.
     """)
 
     st.markdown("#### Los dos modelos")
@@ -700,7 +700,7 @@ def tab_sobre_el_modelo(artefacto):
         clínico alto con probabilidad de cama baja marca exactamente los casos que el comité
         debe mirar dos veces.
 
-        *Advertencia:* la mortalidad intrahospitalaria tampoco es un patrón oro puro — la
+        *Advertencia:* la mortalidad intrahospitalaria tampoco es un patrón oro puro: la
         limitación del esfuerzo terapéutico también influye en morir, no solo en recibir cama.
         Reduce mucho el sesgo, no lo elimina.
         """)
