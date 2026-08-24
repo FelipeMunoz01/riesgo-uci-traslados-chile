@@ -409,9 +409,14 @@ PRECARGA = {
 }
 
 
+def demo_activo() -> bool:
+    return st.query_params.get("demo") in ("1", "true", "si")
+
+
 def indice_por_defecto(opciones: list, col: str) -> int:
     """Posición del valor de arranque, o 0 si ese valor no está disponible."""
-    preferido = PRECARGA.get(col)
+    tabla = {**PRECARGA, **(PRECARGA_DEMO if demo_activo() else {})}
+    preferido = tabla.get(col)
     return opciones.index(preferido) if preferido in opciones else 0
 
 
@@ -453,7 +458,8 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
         )
         sexo = st.selectbox("Sexo", options=opciones["sexo"], key=f"{key_prefix}_sexo",
             index=indice_por_defecto(opciones["sexo"], "sexo"))
-        edad = st.number_input("Edad", min_value=0, max_value=110, value=60, key=f"{key_prefix}_edad")
+        st.session_state.setdefault(f"{key_prefix}_edad", 60)
+        edad = st.number_input("Edad", min_value=0, max_value=110, key=f"{key_prefix}_edad")
     with col2:
         tipo_ingreso = st.selectbox(
             "Tipo de ingreso", options=opciones["tipo_ingreso"], key=f"{key_prefix}_tingreso",
@@ -564,10 +570,43 @@ def formulario_paciente(artefacto: dict, key_prefix: str) -> dict:
 DIVERGENCIA_ALERTA_PP = 5.0  # puntos porcentuales
 
 
+# Con ?demo=1 la aplicacion arranca con un caso ilustrativo ya calculado: un
+# paciente mayor y con comorbilidades, donde el puntaje de cama queda bajo y el
+# clinico alto. Sirve para compartir un enlace que muestre el hallazgo de una vez,
+# y para generar las capturas de la documentacion sin intervencion manual.
+# Los desplegables se precargan por PRECARGA_DEMO y no por session_state: Streamlit
+# advierte si un widget recibe index= y ademas su valor por la API de estado.
+PRECARGA_DEMO = {
+    "diagnostico1_categoria": "J18",
+    "tipo_procedencia": "OTROS HOSPITALES DE LA RED",
+}
+CASO_DEMO = {
+    "individual_edad": 88,
+    "individual_tiene_hipertension": True,
+    "individual_tiene_diabetes": True,
+    "individual_tiene_erc": True,
+    "individual_tiene_demencia": True,
+    "individual_tiene_insuf_cardiaca": True,
+}
+
+
+def sembrar_demo():
+    """Precarga el caso de ejemplo en session_state antes de crear los widgets."""
+    if not demo_activo():
+        return False
+    if st.session_state.get("_demo_sembrado"):
+        return True
+    for clave, valor in CASO_DEMO.items():
+        st.session_state[clave] = valor
+    st.session_state["_demo_sembrado"] = True
+    return True
+
+
 def tab_caso_individual(artefacto):
     cama, clinico = artefacto["cama_critica"], artefacto["riesgo_clinico"]
+    modo_demo = sembrar_demo()
     datos = formulario_paciente(artefacto, "individual")
-    if st.button("Calcular riesgo", type="primary"):
+    if st.button("Calcular riesgo", type="primary") or modo_demo:
         X = construir_input(datos, artefacto)
         p_cama = cama["modelo"].predict_proba(X)[0, 1]
         p_clin = clinico["modelo"].predict_proba(X)[0, 1]
