@@ -1,6 +1,8 @@
 # Predictor de riesgo de cama crítica (UCI/UTI) con datos GRD de Chile
 
-**▶️ [Probar la aplicación](https://riesgo-uci-traslados-chile.streamlit.app)**
+**▶️ [Probar la aplicación](https://riesgo-uci-traslados-chile.streamlit.app)**  ·  **[Ver un caso de ejemplo ya calculado](https://riesgo-uci-traslados-chile.streamlit.app/?demo=1)**
+
+![Priorización de camas críticas](docs/hero.png)
 
 Modelo y aplicación para estimar, **al momento de decidir el traslado de un paciente
 entre instituciones**, dos cosas distintas:
@@ -61,6 +63,12 @@ sepsis (55 % → 26 % de uso mientras la mortalidad sube de 18 % a 50 %).
 No es que estén menos graves: es limitación del esfuerzo terapéutico y racionamiento de
 camas. Un modelo entrenado solo sobre "¿ocupó cama crítica?" diría **riesgo bajo** justo
 para los pacientes más frágiles.
+
+La aplicación muestra los dos puntajes y avisa cuando divergen. Este es un paciente de
+88 años con neumonía, trasladado desde otro hospital, con hipertensión, diabetes,
+enfermedad renal crónica, insuficiencia cardíaca y demencia:
+
+![Los dos puntajes divergen 17,3 puntos](docs/resultado.png)
 
 **La solución fue entrenar un segundo modelo** sobre `UCI/UTI o fallecimiento`, que no
 sufre ese sesgo del mismo modo. Cuando ambos puntajes divergen, esa divergencia es la
